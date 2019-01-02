@@ -214,8 +214,6 @@ void tft_drawclock(uint16_t color=ST7735_YELLOW, uint16_t bgcolor=ST7735_BLACK, 
       tft_text(text,        color, 2, x + 102, y);
   }
   LastDateTime = DateTime;
-  //tft_text(String(), color, 2, x+30, y);
-  //tft_text(String(), color, 2, x+60, y);
 }
 
 
@@ -233,7 +231,7 @@ void tft_clrdate(uint16_t bgcolor=ST7735_BLACK, int x=7, int y=100) {
 
       if (LastDateTime.month <=9) text = String("0") + String(LastDateTime.month);
       else text = String(LastDateTime.month);
-      tft_text(text,      bgcolor, 2, x + 86, y);
+      tft_text(text,        bgcolor, 2, x + 86, y);
 }
 
 void tft_drawdate(uint16_t color=ST7735_WHITE, uint16_t bgcolor=ST7735_BLACK, int x=7, int y=100) {
