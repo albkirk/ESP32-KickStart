@@ -37,11 +37,11 @@ bool actualUpdate(bool sketch=true){
 
   void ota_setup() {
     // ***********  OTA SETUP
-    // Port defaults to 8266
-    // ArduinoOTA.setPort(8266);
+    // Default Port is 8266 for ESP8266 and 3232 for ESP-32
+    ArduinoOTA.setPort(8266);
 
-    // Hostname defaults to esp8266-[ChipID]
-    // ArduinoOTA.setHostname("myesp8266");
+    // Default Hostname is esp8266-[ChipID] for ES8266 and esp3232-[MAC] for ESP-32
+    // ArduinoOTA.setHostname("myesp32");
 
     // No authentication by default
     ArduinoOTA.setPassword((const char *)"12345678");
@@ -50,17 +50,22 @@ bool actualUpdate(bool sketch=true){
     // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
 
     ArduinoOTA.onStart([]() { // what to do before OTA download insert code here
-        telnet_println("Starting OTA update");
+      String type;
+      if (ArduinoOTA.getCommand() == U_FLASH)
+        type = "sketch";
+      else // U_SPIFFS
+        type = "filesystem";
+
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+
+
+        telnet_println("Starting OTA update " + type);
       });
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
       Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
     });
-    ArduinoOTA.onEnd([]() { // do a fancy thing with our board led at end
-        for (int i=1;i<24;i++){
-          digitalWrite(LED_esp, boolean(i % 2));
-          delay(120);
-        }
-        digitalWrite(LED_esp,HIGH); // Switch OFF ESP LED to save energy
+    ArduinoOTA.onEnd([]() {
+        flash_LED(15);      // Flash board led 15 times at end
         telnet_println("\nEnd");
         ESPBoot();
       });

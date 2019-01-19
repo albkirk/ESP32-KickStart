@@ -10,6 +10,7 @@ extern "C" {
 */
 
 //#include <ESP8266WiFi.h>
+#include <ArduinoJson.h>
 //#include <functions.h>
 
 
@@ -18,10 +19,12 @@ extern "C" {
 #define MINRSSI -70                             // Min RSSI to add the device in the list
 #define MAXDEVICES 100
 #define JBUFFER 15 + (MAXDEVICES * 40)
+#define ARDUINOJSON_ENABLE_ARDUINO_STRING 1
 
 
 // WiFi and Sniffer VARIABLEs
 int WIFI_state = WL_DISCONNECTED;
+int Last_WIFI_state = WL_NO_SHIELD;
 unsigned int WIFI_Retry = 120;                  // Timer to retry the WiFi connection
 unsigned long WIFI_LastTime = 0;                // Last WiFi connection attempt time stamp
 int WIFI_errors = 0;                            // WiFi errors Counter
@@ -230,26 +233,27 @@ void wifi_connect() {
           }
           //delay(1000);                        // required to comment for fast WiFi registration
           //WiFi.hostname(config.Location + String("-") + config.DeviceName);
-          WiFi.begin(config.ssid.c_str(), config.WiFiKey.c_str());
+          WiFi.begin(config.ssid, config.WiFiKey);
           WIFI_state = WiFi.waitForConnectResult();
           if ( WIFI_state == WL_CONNECTED ) {
-              Serial.print("Connected to WiFi network! " + config.ssid + " IP: "); Serial.println(WiFi.localIP());
+              Serial.print("Connected to WiFi network! " + String(config.ssid) + " IP: "); Serial.println(WiFi.localIP());
           }
       }
       else {
           // Initialize Wifi in AP+STA mode
           WiFi.mode(WIFI_AP_STA);
-          WiFi.begin(config.ssid.c_str(), config.WiFiKey.c_str());
+          WiFi.begin(config.ssid, config.WiFiKey);
           WIFI_state = WiFi.waitForConnectResult();
           if ( WIFI_state == WL_CONNECTED ) {
-              Serial.print("Connected to WiFi network! " + config.ssid + " IP: "); Serial.println(WiFi.localIP());
+              Serial.print("Connected to WiFi network! " + String(config.ssid) + " IP: "); Serial.println(WiFi.localIP());
           }
           //WiFi.mode(WIFI_AP);                 // comment the 6 lines above if you need AP only
           WiFi.softAP(ESP_SSID.c_str());
-          //WiFi.softAP(config.ssid.c_str());
+          //WiFi.softAP(config.ssid);
           Serial.print("WiFi in AP mode, with IP: "); Serial.println(WiFi.softAPIP());
       }
   }
+  else WIFI_state = WL_CONNECTED;
 }
 
 
@@ -263,10 +267,13 @@ void wifi_loop() {
     if ( WiFi.status() != WL_CONNECTED ) {
         if ( millis() - WIFI_LastTime > (WIFI_Retry * 1000)) {
             WIFI_errors ++;
-            Serial.print( "in loop function WiFI ERROR! #: " + String(WIFI_errors) + "  ==> "); Serial.println( WiFi.status() );
+            Serial.println( "in loop function WiFI ERROR! #: " + String(WIFI_errors) + "  ==> " + (wl_status_t)WiFi.status());
             WIFI_LastTime = millis();
             wifi_connect();
         }
+    }
+    else {
+        if (WIFI_state != WL_CONNECTED) WIFI_state = WL_CONNECTED;
     }
     yield();
 }

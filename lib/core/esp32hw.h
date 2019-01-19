@@ -1,5 +1,9 @@
 #include <DHT.h>
 
+#include <buttons.h>
+#define setup_Buttons true
+
+
 uint32_t getChipId() {
   uint8_t chipid[6];
   uint32_t output = 0;
@@ -22,7 +26,7 @@ uint32_t getChipId() {
 
 // Battery & ESP Voltage
 #define Batt_Max float(4.2)                 // Battery Highest voltage.  [v]
-#define Batt_Min float(3.0)                 // Battery lowest voltage.   [v]
+#define Batt_Min float(3.4)                 // Battery lowest voltage.   [v]
 #define Vcc float(3.3)                      // Theoretical/Typical ESP voltage. [v]
 #define VADC_MAX float(1.0)                 // Maximum ADC Voltage input
 float voltage = 0.0;                        // Input Voltage [v]
@@ -63,20 +67,44 @@ String HEXtoUpperString(uint32_t hexval, uint hexlen) {
 }
 
 /*
+//  ESP8266
+void GoingToSleep(byte Time_minutes = 0) {
+  //rtcData.lastUTCTime = curUnixTime();
+  //RTC_write();
+  ESP.deepSleep( Time_minutes * 60 * 1000000);   // time in minutes converted to microseconds
+}
+*/
+
+// ESP32
+void GoingToSleep(byte Time_minutes = 0) {
+  //rtcData.lastUTCTime = curUnixTime();
+  //RTC_write();
+  if (Time_minutes > 0) esp_sleep_enable_timer_wakeup(Time_minutes * 60  * 1000000);  // time in minutes converted to microseconds
+  esp_deep_sleep_start();
+}
+
+
+double ReadVoltage(byte pin){
+  double reading = analogRead(pin); // Reference voltage is 3v3 so maximum reading is 3v3 = 4095 in range 0 to 4095
+  if(reading < 1 || reading > 4095) return -1;
+  //return -0.000000000009824 * pow(reading,3) + 0.000000016557283 * pow(reading,2) + 0.000854596860691 * reading + 0.065440348345433;
+  return -0.000000000000016 * pow(reading,4) + 0.000000000118171 * pow(reading,3)- 0.000000301211691 * pow(reading,2)+ 0.001109019271794 * reading + 0.034143524634089;
+} // Added an improved polynomial, use either, comment out as required
+
+
+
 float getVoltage() {
     // return battery level in Percentage [0 - 100%]
     voltage = 0;
     for(int i = 0; i < Number_of_measures; i++) {
-        if (Using_ADC) {voltage += analogRead(A0) * Vcc;}
-        else {voltage += ESP.getVcc();} // only later, the (final) measurement will be divided by 1000
-        delay(10);
+        voltage += ReadVoltage(36);
+        delay(50);
     };
     voltage = voltage / Number_of_measures;
-    voltage = voltage / 1000.0 + LDO_Corr;
-    //telnet_println("Averaged and Corrected Voltage: " + String(voltage));
+    voltage = (voltage * 2) + LDO_Corr;
+    Serial.println("Averaged and Corrected Voltage: " + String(voltage));
     return ((voltage - Batt_Min) / (Batt_Max - Batt_Min)) * 100.0;
 }
-*/
 
 long getRSSI() {
     // return WiFi RSSI Strength signal [dBm]
@@ -160,7 +188,6 @@ float getHumidity() {
 return -1;
 }
 
-
 void ESPBoot() {
   Serial.println("Booting in 3 seconds...");
   delay(3000);
@@ -182,25 +209,29 @@ void FormatConfig() {                                 // WARNING!! To be used on
 */
 
 void blink_LED(int slot) {                            // slot range 1 to 10 =>> 3000/300
-    now_millis = millis() % Pace_millis;
-    if (now_millis > LED_millis*(slot-1) && now_millis < LED_millis*slot-LED_millis/2 ) {
-        digitalWrite(LED_esp, boolean(config.LED));   // toggles LED status. will be restored by command above
-        delay(LED_millis/2);
+    if (LED_esp>=0) {
+        now_millis = millis() % Pace_millis;
+        if (now_millis > LED_millis*(slot-1) && now_millis < LED_millis*slot-LED_millis/2 ) {
+            digitalWrite(LED_esp, boolean(!config.LED));   // toggles LED status. will be restored by command above
+            delay(LED_millis/2);
+        }
     }
 }
 
-void flash_LED(unsigned int n_flash) {                // number of flash 1 to 6 =>> 3000/500
-    for (size_t i = 0; i < n_flash; i++) {
-      digitalWrite(LED_esp, boolean(config.LED));     // Turn LED on
-      delay(LED_millis/3);
-      digitalWrite(LED_esp, boolean(!config.LED));    // Turn LED off
-      delay(LED_millis/3);
+void flash_LED(unsigned int n_flash = 1) {
+    if (LED_esp>=0) {
+        for (size_t i = 0; i < n_flash; i++) {
+            digitalWrite(LED_esp, boolean(!config.LED));     // Turn LED on
+            delay(LED_millis/3);
+            digitalWrite(LED_esp, boolean(config.LED));      // Turn LED off
+            delay(LED_millis/3);
+        }
     }
 }
 
-void Buzz(unsigned int n_beeps) {                     // number of beeps 1 to 6 =>> 3000/500
+void Buzz(unsigned int n_beeps = 1) {
     if (BUZZER>=0) {
-          for (size_t i = 0; i < n_beeps; i++) {
+        for (size_t i = 0; i < n_beeps; i++) {
             digitalWrite(BUZZER, HIGH);               // Turn Buzzer on
             delay(BUZZER_millis/6);
             digitalWrite(BUZZER, LOW);                // Turn Buzzer off
@@ -217,9 +248,14 @@ void hw_setup() {
           digitalWrite(LED_esp, LOW);                     // initialize LED off
       }
   // Input GPIOs
+      analogSetPinAttenuation(36,ADC_11db); // ADC_11db provides an attenuation so that IN/OUT = 1 / 3.6.
+                                            // An input of 3 volts is reduced to 0.833 volts before ADC measurement
+      adcAttachPin(36);                     // S_VP  -- GPIO36, ADC_PRE_AMP, ADC1_CH0, RTC_GPIO0
+
 
   // Start DHT device
       if (DHTPIN>=0) dht_val.begin();
+      if (setup_Buttons) buttons_setup();                 // Start Buttons call precedures
 }
 
 void hw_loop() {

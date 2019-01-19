@@ -16,12 +16,12 @@
 // HARWARE & SOFTWARE Version
 #define BRANDName "AlBros_Team"                         // Hardware brand name
 #define MODELName "GenBox_A"                            // Hardware model name
-#define SWVer "10.06"                                   // Major.Minor Software version (use String 01.00 - 99.99 format !)
+#define SWVer "10.05"                                   // Major.Minor Software version (use String 01.00 - 99.99 format !)
 
 // Battery & ESP Voltage
 #define BattPowered true                                // Is the device battery powered?
 #define LDO_Corr float(0.4)                             // Battery Voltage [volt] corrective Factor due to LDO/Diode voltage drop
-#define Batt_L_Thrs 20                                  // Battery level threshold [0%-100%] (before slepping forever).
+#define Batt_L_Thrs 40                                  // Battery level threshold [0%-100%] (before slepping forever).
 
 // GPIO to Function Assignment
 #define Using_ADC false                                 // will this device use the ADC? (if not it will measure the interval voltage)
@@ -30,10 +30,10 @@
 #define BUZZER -1                                       // (Active) Buzzer pin. Suggest to use pin 0.  -1 means NOT used!
 
 
-struct __attribute__((__packed__)) strConfig {
-  char DeviceName[16];
-  char Location[16];
-  char ClientID[8];
+struct strConfig {
+  String DeviceName;
+  String Location;
+  String ClientID;
   byte ONTime;
   byte SLEEPTime;
   boolean DEEPSLEEP;
@@ -43,24 +43,24 @@ struct __attribute__((__packed__)) strConfig {
   boolean WEB;
   boolean Remote_Allow;
   boolean STAMode;
-  char ssid[32];
-  char WiFiKey[32];
+  String ssid;
+  String WiFiKey;
   boolean dhcp;
   byte IP[4];
   byte Netmask[4];
   byte Gateway[4];
-  char NTPServerName[128];
+  String NTPServerName;
   long TimeZone;
   long Update_Time_Via_NTP_Every;
   boolean isDayLightSaving;
-  char MQTT_Server[128];
+  String MQTT_Server;
   long MQTT_Port;
-  char MQTT_User[16];
-  char MQTT_Password[16];
-  char UPDATE_Server[128];
+  String MQTT_User;
+  String MQTT_Password;
+  String UPDATE_Server;
   long UPDATE_Port;
-  char UPDATE_User[16];
-  char UPDATE_Password[16];
+  String UPDATE_User;
+  String UPDATE_Password;
   long Temp_Corr;
   char InitColor[10];
 } config;
@@ -69,9 +69,9 @@ struct __attribute__((__packed__)) strConfig {
 void config_defaults() {
     Serial.println("Setting config Default values");
 
-    strcpy(config.DeviceName, "ESP_Generic");             // Device Name
-    strcpy(config.Location, "MainRoom");                  // Device Location
-    strcpy(config.ClientID, "001001");                    // Client ID (used on MQTT)
+    config.DeviceName = String("ESP_Generic");            // Device Name
+    config.Location = String("MainRoom");                 // Device Location
+    config.ClientID = String("001001");                   // Client ID (used on MQTT)
     config.ONTime = 60;                                   // 0-255 seconds (Byte range)
     config.SLEEPTime = 0;                                 // 0-255 minutes (Byte range)
     config.DEEPSLEEP = false;                             // 0 - Disabled, 1 - Enabled
@@ -81,24 +81,24 @@ void config_defaults() {
     config.WEB = false;                                   // 0 - Disabled, 1 - Enabled
     config.Remote_Allow = true;                           // 0 - Not Allow, 1 - Allow remote operation
     config.STAMode = true;                                // 0 - AP or AP+STA Mode, 1 - Station only Mode
-    strcpy(config.ssid, "ThomsonCasaN");                 // Wireless LAN SSID (STA mode)
-    strcpy(config.WiFiKey, "12345678");                  // Wireless LAN Key (STA mode)
+    config.ssid = String("ThomsonCasaN");                 // Wireless LAN SSID (STA mode)
+    config.WiFiKey = String("12345678");                  // Wireless LAN Key (STA mode)
     config.dhcp = true;                                   // 0 - Static IP, 1 - DHCP
     config.IP[0] = 192; config.IP[1] = 168; config.IP[2] = 1; config.IP[3] = 10;
     config.Netmask[0] = 255; config.Netmask[1] = 255; config.Netmask[2] = 255; config.Netmask[3] = 0;
     config.Gateway[0] = 192; config.Gateway[1] = 168; config.Gateway[2] = 1; config.Gateway[3] = 254;
-    strcpy(config.NTPServerName, "pt.pool.ntp.org");         // NTP Server
+    config.NTPServerName = String("pt.pool.ntp.org");     // NTP Server
     config.Update_Time_Via_NTP_Every = 1200;              // Time in minutes to re-sync the clock
     config.TimeZone = 0;                                  // -12 to 13. See Page_NTPSettings.h why using -120 to 130 on the code.
     config.isDayLightSaving = 1;                          // 0 - Disabled, 1 - Enabled
-    strcpy(config.MQTT_Server, "iothubna.hopto.org");    // MQTT Broker Server (URL or IP)
+    config.MQTT_Server = String("iothubna.hopto.org");    // MQTT Broker Server (URL or IP)
     config.MQTT_Port = 1883;                              // MQTT Broker TCP port
-    strcpy(config.MQTT_User, "admin");                   // MQTT Broker username
-    strcpy(config.MQTT_Password, "admin");               // MQTT Broker password
-    strcpy(config.UPDATE_Server, "iothubna.hopto.org");  // UPDATE Server (URL or IP)
+    config.MQTT_User = String("admin");                   // MQTT Broker username
+    config.MQTT_Password = String("admin");               // MQTT Broker password
+    config.UPDATE_Server = String("iothubna.hopto.org");  // UPDATE Server (URL or IP)
     config.UPDATE_Port = 1880;                            // UPDATE Server TCP port
-    strcpy(config.UPDATE_User, "user");                  // UPDATE Server username
-    strcpy(config.UPDATE_Password, "1q2w3e4r");          // UPDATE Server password
+    config.UPDATE_User = String("user");                  // UPDATE Server username
+    config.UPDATE_Password = String("1q2w3e4r");          // UPDATE Server password
     config.Temp_Corr = 0;     // Sensor Temperature Correction Factor, typically due to electronic self heat.
     strcpy(config.InitColor, "#EEEEEEFF");                // RGB Initial color (when powering ON)
 }
@@ -115,8 +115,23 @@ void config_defaults() {
 #include <global.h>
 
 
+byte touchPins[] = { T0, T1, T2, T3, T4, T5, T6, T7, T8, T9 };
+#define numTouchPins sizeof(touchPins)/ sizeof(*touchPins)
+uint16_t touch[numTouchPins] = {};
 
+// **** Normal code definition here ...
+// Which pin on the ESP32 is connected to the NeoPixels?
+#define PIN         19
 
+// How many NeoPixels LEDs are attached to the ESP32?
+#define NUMPIXELS   8
+
+// We define birghtness of NeoPixel LEDs
+#define BRIGHTNESS  128
+
+#include <color.h>
+int delayval = 50; // delay for half a second
+int increment = 0;
 
 // **** Normal code functions here ...
 
@@ -159,12 +174,12 @@ void setup() {
   // Start MQTT service
       mqtt_setup();
 
-  //  LOW Battery check (GLOBAL library)
+  //  LOW Battery check
       //LOW_Batt_check();               // Must be execute after mqtt_setup. If LOW Batt, it will DeepSleep forever!
 
 
   // **** Normal SETUP Sketch code here...
-
+  color_setup();
 
   // Last bit of code before leave setup
       ONTime_Offset = millis()/1000 + 0.1;  //  100ms after finishing the SETUP function it starts the "ONTime" countdown.
@@ -202,6 +217,14 @@ void loop() {
 
 
   // **** Normal LOOP Skecth code here ...
+      color_loop();
 
+      /*
+      for( byte pin = 0; pin < numTouchPins; ++ pin ) touch[pin] = touchRead( touchPins[pin] );
+      for( byte i = 0; i < numTouchPins; ++i ) {
+          Serial.print("   T" + String(i) + ": " + touch[i] );
+      }
+      Serial.println();
+      */
 
 }  // end of loop()
