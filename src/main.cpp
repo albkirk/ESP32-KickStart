@@ -16,12 +16,12 @@
 // HARWARE & SOFTWARE Version
 #define BRANDName "AlBros_Team"                         // Hardware brand name
 #define MODELName "GenBox_A"                            // Hardware model name
-#define SWVer "10.06"                                   // Major.Minor Software version (use String 01.00 - 99.99 format !)
+#define SWVer "10.07"                                   // Major.Minor Software version (use String 01.00 - 99.99 format !)
 
 // Battery & ESP Voltage
 #define BattPowered true                                // Is the device battery powered?
 #define LDO_Corr float(0.4)                             // Battery Voltage [volt] corrective Factor due to LDO/Diode voltage drop
-#define Batt_L_Thrs 20                                  // Battery level threshold [0%-100%] (before slepping forever).
+#define Batt_L_Thrs 5                                   // Battery level threshold [0%-100%] (before slepping forever).
 
 // GPIO to Function Assignment
 #define Using_ADC false                                 // will this device use the ADC? (if not it will measure the interval voltage)
@@ -51,7 +51,7 @@ struct __attribute__((__packed__)) strConfig {
   byte Gateway[4];
   char NTPServerName[128];
   long TimeZone;
-  long Update_Time_Via_NTP_Every;
+  unsigned long Update_Time_Via_NTP_Every;
   boolean isDayLightSaving;
   char MQTT_Server[128];
   long MQTT_Port;
@@ -115,6 +115,7 @@ void config_defaults() {
 #include <global.h>
 
 
+// **** Normal code definition here ...
 
 
 
@@ -130,6 +131,7 @@ void setup() {
   Serial.println("Hello World!");
   Serial.println("My ID is " + ChipID + " and I'm running version " + SWVer);
   Serial.println("Reset reason: " + String(ESPWakeUpReason()));
+
 
   // Output GPIOs
 
@@ -160,7 +162,7 @@ void setup() {
       mqtt_setup();
 
   //  LOW Battery check (GLOBAL library)
-      //LOW_Batt_check();               // Must be execute after mqtt_setup. If LOW Batt, it will DeepSleep forever!
+      //if (BattPowered) LOW_Batt_check();               // Must be execute after mqtt_setup. If LOW Batt, it will DeepSleep forever!
 
 
   // **** Normal SETUP Sketch code here...

@@ -3,7 +3,6 @@
  Kudos for this author: Robert Duality4Y [GitHub]
  https://github.com/esp8266/Arduino/issues/1539
 */
-
 #include <EEPROM.h>
 #define EEPROMZize 2048
 
@@ -85,7 +84,6 @@ void storage_print() {
 }
 
 
-
 boolean storage_read() {
     Serial.println("Reading Configuration");
     if (EEPROM.read(0) == 'C' && EEPROM.read(1) == 'F'  && EEPROM.read(2) == 'G' && EEPROMReadlong(3) > 2) {
@@ -95,8 +93,8 @@ boolean storage_read() {
     }
     else {
         Serial.println("Configurarion NOT FOUND!!!!");
-        Serial.println("Value of 0,1,2: " + String(EEPROM.read(0)) + String(EEPROM.read(1)) + String(EEPROM.read(2)));
-        Serial.println("Value of 3: " + String(EEPROMReadlong(3)));
+        //Serial.println("Value of 0,1,2: " + String(EEPROM.read(0)) + String(EEPROM.read(1)) + String(EEPROM.read(2)));
+        //Serial.println("Value of 3: " + String(EEPROMReadlong(3)));
         return false;
     }
 }

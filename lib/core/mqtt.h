@@ -111,11 +111,11 @@ void on_message(const char* topic, byte* payload, unsigned int length) {
     telnet_println("Payload: " + String((char*)msg));
 
     // Decode JSON request
-    StaticJsonBuffer<200> jsonBuffer;
-    JsonObject& data = jsonBuffer.parseObject((char*)msg);
+    StaticJsonDocument<200> data;
+    DeserializationError JSONerror = deserializeJson(data, msg);
 
-    if (!data.success()) {
-      telnet_println("JSON Object parsing failed");
+    if (JSONerror) {
+      telnet_println("JSON deserialization failed!. Error code: " + String(JSONerror.c_str()));
       return;
     }
 

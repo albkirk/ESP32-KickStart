@@ -18,7 +18,7 @@ extern "C" {
 #define PURGETIME 600000                        // Timeout to purge the list [miliseconds]
 #define MINRSSI -70                             // Min RSSI to add the device in the list
 #define MAXDEVICES 100
-#define JBUFFER 15 + (MAXDEVICES * 40)
+#define JBUFFER 30 + (MAXDEVICES * 40)
 #define ARDUINOJSON_ENABLE_ARDUINO_STRING 1
 
 
@@ -30,7 +30,7 @@ unsigned long WIFI_LastTime = 0;                // Last WiFi connection attempt 
 int WIFI_errors = 0;                            // WiFi errors Counter
 
 char jsonString[JBUFFER];
-StaticJsonBuffer<JBUFFER>  wifijsonBuffer;
+DynamicJsonDocument doc(JBUFFER);
 
 //WiFi initialization
 WiFiClient wifiClient;
@@ -140,11 +140,10 @@ String wifi_listAPs() {
     uint devices_rssi;
 
     // Purge and recreate json string
-    wifijsonBuffer.clear();
-    JsonObject& root = wifijsonBuffer.createObject();
-    JsonArray& ap = root.createNestedArray("APs");
-    JsonArray& ssid = root.createNestedArray("AP_SSIDs");
-    JsonArray& rssi = root.createNestedArray("AP_RSSIs");
+    doc.clear();
+    JsonArray ap = doc.createNestedArray("APs");
+    JsonArray ssid = doc.createNestedArray("AP_SSIDs");
+    JsonArray rssi = doc.createNestedArray("AP_RSSIs");
 
     // add APs
     for (int u = 0; u < aps_known_count; u++) {
@@ -159,7 +158,7 @@ String wifi_listAPs() {
     }
 
     //root.prettyPrintTo(Serial);               // dump pretty format to serial interface
-    root.printTo(jsonString);
+    serializeJson(doc, jsonString);             //root.printTo(jsonString);
     // Serial.print("jsonString ready to Publish: "); Serial.println((jsonString));
     return jsonString;
 }
@@ -169,9 +168,8 @@ String wifi_listSTAs() {
     String devices;
 
     // Purge and recreate json string
-    wifijsonBuffer.clear();
-    JsonObject & root = wifijsonBuffer.createObject();
-    JsonArray & sta = root.createNestedArray("Stations");
+    doc.clear();
+    JsonArray sta = doc.createNestedArray("Stations");
 
     // Add Clients that has RSSI higher then minimum
     for (int u = 0; u < clients_known_count; u++) {
@@ -182,7 +180,7 @@ String wifi_listSTAs() {
     }
 
     //root.prettyPrintTo(Serial);               // dump pretty format to serial interface
-    root.printTo(jsonString);
+    serializeJson(doc, jsonString);             //root.printTo(jsonString);
     //Serial.print("jsonString ready to Publish: "); Serial.println((jsonString));
     return jsonString;
 }
@@ -192,10 +190,9 @@ String wifi_listProbes() {
     String devices_prb, devices_ssid;
 
     // Purge and recreate json string
-    wifijsonBuffer.clear();
-    JsonObject& root = wifijsonBuffer.createObject();
-    JsonArray& prb = root.createNestedArray("PROBEs");
-    JsonArray& ssid = root.createNestedArray("SSIDs");
+    doc.clear();
+    JsonArray prb = doc.createNestedArray("PROBEs");
+    JsonArray ssid = doc.createNestedArray("SSIDs");
 
     // add PROBEs
     for (int u = 0; u < probes_known_count; u++) {
@@ -208,7 +205,7 @@ String wifi_listProbes() {
     }
 
     //root.prettyPrintTo(Serial);               // dump pretty format to serial interface
-    root.printTo(jsonString);
+    serializeJson(doc, jsonString);             //root.printTo(jsonString);
     Serial.print("jsonString ready to Publish: "); Serial.println((jsonString));
     return jsonString;
 }
@@ -219,8 +216,13 @@ String wifi_listProbes() {
 void wifi_connect() {
   //  Connect to WiFi acess point or start as Acess point
   if ( WiFi.status() != WL_CONNECTED ) {
+      //Serial.printf("Default hostname: %s\n", WiFi.hostname().c_str());
+      String host_name = String(config.Location + String("-") + config.DeviceName);
+      //wifi_station_set_hostname(host_name.c_str());         
+      WiFi.setHostname(host_name.c_str());
+      //Serial.printf("Calculated hostname: %s\n", WiFi.hostname().c_str());
       if (config.STAMode) {
-          // Setup ESP8266 in Station mode
+          // Setup ESP in Station mode
           WiFi.mode(WIFI_STA);
           // the IP address for the shield
           if (!config.dhcp) {

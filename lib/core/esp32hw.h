@@ -1,3 +1,4 @@
+#include <wifi.h>
 #include <DHT.h>
 
 #include <buttons.h>

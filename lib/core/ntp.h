@@ -26,7 +26,7 @@ volatile unsigned long UnixTimeStamp = 0;     // GLOBAL TIME var ( Will be deviv
 unsigned long RefMillis = 0;                  // Millis val for reference
 boolean NTP_Sync = false;                     // NTP is synched?
 unsigned int NTP_Retry = 120;                 // Timer to retry the NTP connection
-long NTP_LastTime = 0;                        // Last NTP connection attempt time stamp
+unsigned long NTP_LastTime = 0;                        // Last NTP connection attempt time stamp
 int NTP_errors = 0;                           // NTP errors Counter
 volatile unsigned long cur_unixtime;          // Auxiliary var
 volatile unsigned long ntpNOW = 0;            // Auxiliary var for millis

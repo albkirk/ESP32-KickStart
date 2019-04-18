@@ -80,7 +80,7 @@ String urldecode(String input) // (based on https://code.google.com/p/avr-netino
 
 void ConfigureWifi(){
   Serial.println("Configuring Wifi");
-  WiFi.begin (config.ssid.c_str(), config.WiFiKey.c_str());
+  WiFi.begin (config.ssid, config.WiFiKey);
 
   while (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi not connected");
