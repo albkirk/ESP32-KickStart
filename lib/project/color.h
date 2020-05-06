@@ -53,6 +53,9 @@ Change Light brightness by changing the value of: GAIN
 //
 // VARIABLES
 //
+    char Color[10]     = "#00000000"; // RGB Color code. syntax: '#' + RED + GREEN + BLUE + Transparency
+    char LastColor[10] = "#00000000"; // each param use 2 CHARs and range from 0 to FF (HEX format of 0-255).
+                                      // Transparency is ignored. It's kept only for compatibility purposes.
     byte RGB[3];                      // RRB trio byte Values to control the OUTPut PWM PINs
     byte neoID = 0;                    // NEO Pixel ID [0 - n] to change color
     byte zeros[3] = {0, 0, 0};        // trio of byte Value 0 to represnt Black color

@@ -51,5 +51,5 @@ void execute_factory_reset_html()
 {
 		Serial.println("Web Page RESET button pushed!!! ");
 		storage_reset();
-		BootESP();
+		ESPBoot();
 }

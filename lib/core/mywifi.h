@@ -10,6 +10,7 @@ extern "C" {
 */
 
 //#include <ESP8266WiFi.h>
+#include <ESPmDNS.h>                        // Include the mDNS library
 #include <ArduinoJson.h>
 //#include <functions.h>
 
@@ -216,30 +217,31 @@ String wifi_listProbes() {
 void wifi_connect() {
   //  Connect to WiFi acess point or start as Acess point
   if ( WiFi.status() != WL_CONNECTED ) {
-      //Serial.printf("Default hostname: %s\n", WiFi.hostname().c_str());
-      String host_name = String(config.Location + String("-") + config.DeviceName);
-      //wifi_station_set_hostname(host_name.c_str());         
-      WiFi.setHostname(host_name.c_str());
-      //Serial.printf("Calculated hostname: %s\n", WiFi.hostname().c_str());
       if (config.STAMode) {
           // Setup ESP in Station mode
           WiFi.mode(WIFI_STA);
           // the IP address for the shield
-          if (!config.dhcp) {
-            // Static IP (No dhcp) may be handy for fast WiFi registration
+          if (!config.DHCP) {
+              //WiFi.persistent(true);                   // required for fast WiFi registration
+            // Static IP (No DHCP) may be handy for fast WiFi registration
               IPAddress StaticIP(config.IP[0], config.IP[1], config.IP[2], config.IP[3]);
               IPAddress Gateway(config.Gateway[0], config.Gateway[1], config.Gateway[2], config.Gateway[3]);
               IPAddress Subnet(config.Netmask[0], config.Netmask[1], config.Netmask[2], config.Netmask[3]);
               IPAddress DNS(config.Gateway[0], config.Gateway[1], config.Gateway[2], config.Gateway[3]);
               WiFi.config(StaticIP, Gateway, Subnet, DNS);
-          }
-          //delay(1000);                        // required to comment for fast WiFi registration
-          //WiFi.hostname(config.Location + String("-") + config.DeviceName);
+          };
+          String host_name = String(config.Location + String("-") + config.DeviceName);
+          WiFi.setHostname(host_name.c_str());
           WiFi.begin(config.ssid, config.WiFiKey);
           WIFI_state = WiFi.waitForConnectResult();
           if ( WIFI_state == WL_CONNECTED ) {
               Serial.print("Connected to WiFi network! " + String(config.ssid) + " IP: "); Serial.println(WiFi.localIP());
-          }
+              //rtcData.LastWiFiChannel = uint(wifi_get_channel);
+                if (!MDNS.begin(host_name.c_str())) {             // Start the mDNS responder for "host_name.local" domain
+                    Serial.println("Error setting up MDNS responder!");
+                }
+                else Serial.println("mDNS responder started");
+          };
       }
       else {
           // Initialize Wifi in AP+STA mode
@@ -260,8 +262,7 @@ void wifi_connect() {
 
 
 void wifi_setup() {
-    WiFi.mode(WIFI_OFF);
-    //WiFi.persistent(false);                   // required for fast WiFi registration
+    WiFi.mode(WIFI_MODE_STA);
     wifi_connect();
 }
 

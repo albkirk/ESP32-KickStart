@@ -10,7 +10,7 @@
 // EXAMPLEs
 // /001001/outside/MailBox/telemetry/Status           --> Device status OK / LOWBat
 // /001001/room/Estore/telemetry/RSSI                 --> WiFi signal strength value in dBm
-// /001001/kitchen/AmbiSense/telemetry/BatLevel       --> Battery Level 0 - 100 %
+// /001001/kitchen/AmbiSense/telemetry/BattLevel       --> Battery Level 0 - 100 %
 // /001001/kitchen/AmbSense/configure/DeepSleep       --> Set DeepSleep feature to Enabled - Disabled
 // /001001/outside/MailBox/configure/LED              --> Set True / False to turn LED ON/OFF
 
@@ -94,108 +94,8 @@ void mqtt_disconnect() {
     telnet_println("Disconnected from MQTT Broker.");
 }
 
-
-// Adding function with project's customized MQTT actions
-#include <custommqtt.h>
-
-// Handling of received message
-void on_message(const char* topic, byte* payload, unsigned int length) {
-
-    telnet_println("New message received from Broker");
-
-    char msg[length + 1];
-    strncpy (msg, (char*)payload, length);
-    msg[length] = '\0';
-
-    telnet_println("Topic: " + String(topic));
-    telnet_println("Payload: " + String((char*)msg));
-
-    // Decode JSON request
-    StaticJsonDocument<200> data;
-    DeserializationError JSONerror = deserializeJson(data, msg);
-
-    if (JSONerror) {
-      telnet_println("JSON deserialization failed!. Error code: " + String(JSONerror.c_str()));
-      return;
-    }
-
-    // Check request method
-    String reqparam = String((const char*)data["param"]);
-    String reqvalue = String((const char*)data["value"]);
-    telnet_println("Received Data: " + reqparam + " = " + reqvalue);
-
-    if ( reqparam == "DeviceName") strcpy(config.DeviceName, (const char*)data["value"]);
-    if ( reqparam == "Location") strcpy(config.Location, (const char*)data["value"]);
-    if ( reqparam == "ClientID") strcpy(config.ClientID, (const char*)data["value"]);
-    if ( reqparam == "DEEPSLEEP") { config.DEEPSLEEP = bool(data["value"]);storage_write(); }
-    if ( reqparam == "SLEEPTime") { config.SLEEPTime = data["value"];storage_write(); }
-    if ( reqparam == "ONTime") { config.ONTime = data["value"];storage_write(); }
-    if ( reqparam == "ExtendONTime") if (bool(data["value"]) == true) Extend_time = 60;
-    if ( reqparam == "LED") config.LED = bool(data["value"]);
-    if ( reqparam == "TELNET") { config.TELNET = bool(data["value"]); storage_write(); ESPBoot(); }
-    if ( reqparam == "OTA") { config.OTA = bool(data["value"]); storage_write(); ESPBoot(); }
-    if ( reqparam == "WEB") { config.WEB = bool(data["value"]); storage_write(); ESPBoot(); }
-    if ( reqparam == "STAMode") config.STAMode = bool(data["value"]);
-    if ( reqparam == "ssid") strcpy(config.ssid, (const char*)data["value"]);
-    if ( reqparam == "WiFiKey") strcpy(config.WiFiKey, (const char*)data["value"]);
-    if ( reqparam == "NTPServerName") strcpy(config.NTPServerName, (const char*)data["value"]);
-    if ( reqparam == "Update_Time_Via_NTP_Every") config.Update_Time_Via_NTP_Every = data["value"];
-    if ( reqparam == "TimeZone") config.TimeZone = data["value"];
-    if ( reqparam == "isDayLightSaving") config.isDayLightSaving = bool(data["value"]);
-    if ( reqparam == "Store") if (bool(data["value"]) == true) storage_write();
-    if ( reqparam == "Boot") if (bool(data["value"]) == true) ESPBoot();
-    if ( reqparam == "Reset") if (bool(data["value"]) == true) storage_reset();
-    if ( reqparam == "Temp_Corr") {
-		    config.Temp_Corr = data["value"];
-		    storage_write();
-		    mqtt_publish(mqtt_pathtele(), "Temperatura", String(getTemperature()));
-	  }
-    mqtt_custom(reqparam, reqvalue, data);
-    storage_print();
-}
-
-
-// The callback for when a PUBLISH message is received from the server.
-void mqtt_callback() {
-    MQTTclient.setCallback(on_message);
-}
-
-
-// MQTT commands to run on setup function.
-void mqtt_setup() {
-    mqtt_connect();
-    mqtt_callback();
-    if (MQTT_state == MQTT_CONNECTED) {
-        if (String(rtc_get_wakeup_cause()) != "DEEPSLEEP_RESET") {
-            mqtt_publish(mqtt_pathtele(), "Boot", String(rtc_get_wakeup_cause()));
-            mqtt_publish(mqtt_pathtele(), "ChipID", ChipID);
-            mqtt_publish(mqtt_pathtele(), "Brand", BRANDName);
-            mqtt_publish(mqtt_pathtele(), "Model", MODELName);
-            mqtt_publish(mqtt_pathtele(), "SWVer", SWVer);
-        }
-        if (BattPowered) {
-            // Check Battery Level
-            Batt_Level = getVoltage();
-            mqtt_publish(mqtt_pathtele(), "BatLevel", String(Batt_Level));
-            if (Batt_Level > Batt_L_Thrs) mqtt_publish(mqtt_pathtele(), "Status", "Battery");
-            else mqtt_publish(mqtt_pathtele(), "Status", "LOW Battery");
-        }
-        else mqtt_publish(mqtt_pathtele(), "Status", "Mains");
-        mqtt_publish(mqtt_pathtele(), "RSSI", String(getRSSI()));
-        mqtt_publish(mqtt_pathtele(), "IP", WiFi.localIP().toString());
-    }
-}
-
-
-// MQTT commands to run on loop function.
-void mqtt_loop() {
-    if (!MQTTclient.loop()) {
-        if ( millis() - MQTT_LastTime > (MQTT_Retry * 1000)) {
-            MQTT_errors ++;
-            Serial.print( "in loop function MQTT ERROR! #: " + String(MQTT_errors) + "  ==> "); Serial.println( MQTTclient.state() );
-            MQTT_LastTime = millis();
-            mqtt_connect();
-        }
-    }
-    yield();
+void mqtt_restart() {
+    mqtt_publish(mqtt_pathtele(), "Status", "Restarting");
+    mqtt_disconnect();
+    ESPRestart();
 }

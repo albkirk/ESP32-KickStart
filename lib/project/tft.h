@@ -246,6 +246,18 @@ void tft_drawEFX(byte EFXid = 0, uint16_t color=MainColor, int x=7, int y=34) {
       text = EFXName[EFXid];
       tft_text(text,        color, 2, x,      y);
 }
+
+void tft_drawambient(float tft_temp, float tft_humi, float tft_TMin, float tft_TMax, uint16_t color=MainColor, int x=7, int y=56) {
+      String text="";
+      text = String("T: " + String(tft_temp, 1) + "C");
+      tft_text(text,        color, 2, x,      y);
+      text = String("H: " + String(tft_humi, 0) + "%");
+      tft_text(text,        color, 2, x, y + 20);
+      text = String("Min/Max T: " + String(tft_TMin, 1) + "/" + String(tft_TMax, 1));
+      tft_text(text,        color, 1, x, y + 40);
+
+}
+
 void tft_drawprevious(uint16_t color=MainColor, int x=10, int y=56) {
       tft.drawBitmap(x     , y, previous_icon, 32, 32, color);
 }

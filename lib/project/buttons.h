@@ -1,5 +1,11 @@
 #define BUTTONS_H true
 
+void ICACHE_RAM_ATTR A_pressed ();
+void ICACHE_RAM_ATTR B_pressed ();
+void ICACHE_RAM_ATTR C_pressed ();
+void ICACHE_RAM_ATTR T_Left_pressed ();
+void ICACHE_RAM_ATTR T_Right_pressed ();
+
 // **** Normal code definition here ...
 #define BUT_A 35              // TTGo TS v1.0 Button A INPUT pin
 #define BUT_B 34              // TTGo TS v1.0 Button B INPUT pin
@@ -179,14 +185,20 @@ void touch_calibrate() {
 }
 
 void buttons_setup() {
-  pinMode(BUT_A, INPUT_PULLUP);
-  pinMode(BUT_B, INPUT_PULLUP);
-  pinMode(BUT_C, INPUT_PULLUP);
-  touch_calibrate();
+  if (BUT_A>=0) {
+        pinMode(BUT_A, INPUT_PULLUP);
+        attachInterrupt(BUT_A, A_pressed, CHANGE);
+  }
+  if (BUT_B>=0) {
+        pinMode(BUT_B, INPUT_PULLUP);
+        attachInterrupt(BUT_B, B_pressed, CHANGE);
+  }
+  if (BUT_C>=0) {
+        pinMode(BUT_C, INPUT_PULLUP);
+        attachInterrupt(BUT_C, C_pressed, CHANGE);
+  }
 
-  attachInterrupt(BUT_A, A_pressed, CHANGE);
-  attachInterrupt(BUT_B, B_pressed, CHANGE);
-  attachInterrupt(BUT_C, C_pressed, CHANGE);
+  touch_calibrate();
   touchAttachInterrupt(TouchPins[0], &T_Left_pressed, TouchThreshold[0]);
   //touchAttachInterrupt(TouchPins[1], &T_Right_pressed, TouchThreshold[1]);
 

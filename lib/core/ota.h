@@ -3,9 +3,10 @@
 //#include <custohttpupdate.h>
 
 
+
+bool HTTPUpdate(bool sketch=true){
 /*
-bool actualUpdate(bool sketch=true){
-    String URLString = "http://" + config.UPDATE_Server + ":" + String(config.UPDATE_Port) + "/Firmware/" + BRANDName + "/" + MODELName;
+    String URLString = "http://" + String(config.UPDATE_Server) + ":" + String(config.UPDATE_Port) + "/Firmware/" + BRANDName + "/" + MODELName;
     const char * updateUrl = URLString.c_str();
     String msg;
     t_httpUpdate_return ret;
@@ -31,9 +32,9 @@ bool actualUpdate(bool sketch=true){
             telnet_println("HTTP Update Failed");
         };
     };
+*/
     return false;
 }
-*/
 
   void ota_setup() {
     // ***********  OTA SETUP
@@ -59,15 +60,15 @@ bool actualUpdate(bool sketch=true){
       // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
 
 
-        telnet_println("Starting OTA update " + type);
+        telnet_println("Starting OTA update: " + type);
       });
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
       Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
     });
     ArduinoOTA.onEnd([]() {
         flash_LED(15);      // Flash board led 15 times at end
-        telnet_println("\nEnd");
-        ESPBoot();
+        telnet_println("\nOTA END with success!");
+        mqtt_restart();
       });
     ArduinoOTA.onError([](ota_error_t error) {
         Serial.printf("Error[%u]: ", error);
@@ -76,14 +77,16 @@ bool actualUpdate(bool sketch=true){
         else if (error == OTA_CONNECT_ERROR) telnet_println("OTA Connect Failed");
         else if (error == OTA_RECEIVE_ERROR) telnet_println("OTA Receive Failed");
         else if (error == OTA_END_ERROR) telnet_println("OTA End Failed");
-        ESPBoot();
+        ESPRestart();
       });
 
     ArduinoOTA.begin();
     telnet_println("Ready for OTA");
-    //if(actualUpdate(true)) ESPBoot();
   }
 
+void ota_http_upg() {
+    if(HTTPUpdate(true)) mqtt_restart();
+}
 
   // OTA commands to run on loop function.
   void ota_loop() {
