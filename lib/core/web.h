@@ -1,8 +1,3 @@
-#include <ESPmDNS.h>
-#include <WebServer.h>
-
-ESP8266WebServer MyWebServer(80);  // The Webserver
-
 //
 //Constants
 //
@@ -78,94 +73,78 @@ String urldecode(String input) // (based on https://code.google.com/p/avr-netino
 
 }
 
-void ConfigureWifi(){
-  Serial.println("Configuring Wifi");
-  WiFi.begin (config.ssid, config.WiFiKey);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi not connected");
-    delay(500);
-  }
-  if (!config.dhcp)
-  {
-    WiFi.config(IPAddress(config.IP[0], config.IP[1], config.IP[2], config.IP[3] ),  IPAddress(config.Gateway[0], config.Gateway[1], config.Gateway[2], config.Gateway[3] ) , IPAddress(config.Netmask[0], config.Netmask[1], config.Netmask[2], config.Netmask[3] ));
-  }
-}
 
 
 // MAIN Functions
 
-	// Include the HTML, STYLE and Script "Pages"
-	#include "Page_Admin.h"
-	#include "Page_General.h"
-	#include "Page_Information.h"
-	#include "Page_NetworkConfiguration.h"
-	#include "Page_NTPSettings.h"
-	#include "Page_FactoryReset.h"
-	#include "Page_Script.js.h"
-	#include "Page_Style.css.h"
+  // Include the HTML, STYLE and Script "Pages"
+#include "Page_Admin.h"
+#include "Page_Script.js.h"
+#include "Page_Style.css.h"
+#include "Page_NTP.h"
+#include "Page_MQTT.h"
+#include "Page_Information.h"
+#include "Page_General.h"
+#include "PAGE_Wireless.h"
+#include "Page_FactoryReset.h"
+#include "Page_Save_Quit.h"
+#ifdef Modem_WEB
+  #include "Page_Modem.h"
+#endif
+#ifdef GPS_WEB
+  #include "Page_GPS.h"
+#endif
 
 void web_setup() {
-    // Start HTTP Server for configuration
-    MyWebServer.on ( "/", []() {
-      Serial.println("admin.html");
-      MyWebServer.send_P ( 200, "text/html", PAGE_AdminMainPage);  // const char top of page
-    }  );
 
-    MyWebServer.on ( "/favicon.ico",   []() {
-      Serial.println("favicon.ico");
-      MyWebServer.send( 200, "text/html", "" );
-    }  );
+  if (config.WEB) {
+        // Start HTTP Server for configuration
+    MyWebServer.on ( "/", []() { MyWebServer.send ( 200, "text/html", PAGE_AdminMainPage);   }  );
 
-    // Example Page
-    //  MyWebServer.on ( "/example.html", []() { MyWebServer.send_P ( 200, "text/html", PAGE_EXAMPLE );  } );
-
-    // Info Page
-    MyWebServer.on ( "/info.html", []() {
-      Serial.println("info.html");
-      MyWebServer.send_P ( 200, "text/html", PAGE_Information );
-    }  );
-
-	// General info Page
-    MyWebServer.on ( "/general.html", send_general_html );
-
-    // Network config
-    MyWebServer.on ( "/config.html", send_network_configuration_html );
-
-	// NTP config
+    MyWebServer.on ( "/admin.html", []() { MyWebServer.send ( 200, "text/html", PAGE_AdminMainPage );   }  );
+    MyWebServer.on ( "/wireless.html", send_wireless_configuration_html );
+    MyWebServer.on ( "/mqtt.html", send_mqtt_html );
+    MyWebServer.on ( "/info.html", []() { MyWebServer.send ( 200, "text/html", PAGE_Information );   }  );
     MyWebServer.on ( "/ntp.html", send_NTP_configuration_html  );
+    MyWebServer.on ( "/general.html", send_general_html  );
+    MyWebServer.on ( "/reset.html", send_factory_reset_html  );
+    MyWebServer.on ( "/savequit.html", send_save_quit_html  );
 
-	// Factory Defaults Page
-    MyWebServer.on ( "/reset.html", factory_reset_html  );
-
-	// HTTP style config
-    MyWebServer.on ( "/style.css", []() {
-      Serial.println("style.css");
-      MyWebServer.send_P ( 200, "text/plain", PAGE_Style_css );
-    } );
-
-	// HTTP microaxaj code
-    MyWebServer.on ( "/microajax.js", []() {
-      Serial.println("microajax.js");
-      MyWebServer.send_P ( 200, "text/plain", PAGE_microajax_js );
-    } );
-
-    MyWebServer.on ( "/admin/devicename", send_devicename_value_html);
-    MyWebServer.on ( "/admin/generalvalues", send_general_configuration_values_html);
-    MyWebServer.on ( "/admin/values", send_network_configuration_values_html );
+    MyWebServer.on ( "/admin/wirelessvalues", send_wireless_configuration_values_html );
     MyWebServer.on ( "/admin/connectionstate", send_connection_state_values_html );
+    MyWebServer.on ( "/admin/mqttvalues", send_mqtt_values_html );
     MyWebServer.on ( "/admin/infovalues", send_information_values_html );
     MyWebServer.on ( "/admin/ntpvalues", send_NTP_configuration_values_html );
-	MyWebServer.on ( "/admin/reset", execute_factory_reset_html);
+    MyWebServer.on ( "/admin/generalvalues", send_general_configuration_values_html);
+    MyWebServer.on ( "/admin/reset",     execute_factory_reset_html);
+    MyWebServer.on ( "/admin/savequit",     execute_save_quit_html);
 
-    MyWebServer.onNotFound ( []() {
-      Serial.println("Page Not Found");
-      MyWebServer.send ( 400, "text/html", "Page not Found" );
-    }  );
+    #ifdef Modem_WEB
+        MyWebServer.on ( "/modem.html", send_modem_html  );
+        MyWebServer.on ( "/admin/modemvalues", send_modem_values_html );
+    #else
+        MyWebServer.on ( "/modem.html", []() { MyWebServer.send ( 200, "text/html", PAGE_AdminMainPage );   }  );
+    #endif
 
+    #ifdef GPS_WEB
+        MyWebServer.on ( "/gps.html", send_gps_html  );
+        MyWebServer.on ( "/admin/gpsvalues", send_gps_values_html );
+    #else
+        MyWebServer.on ( "/gps.html", []() { MyWebServer.send ( 200, "text/html", PAGE_AdminMainPage );   }  );
+    #endif
 
+    MyWebServer.on ( "/favicon.ico",   []() { MyWebServer.send ( 200, "text/html", "" );   }  );
+    MyWebServer.on ( "/style.css", []() { MyWebServer.send ( 200, "text/plain", PAGE_Style_css );  } );
+    MyWebServer.on ( "/microajax.js", []() { MyWebServer.send ( 200, "text/plain", PAGE_microajax_js );  } );
+    MyWebServer.onNotFound ( []() { MyWebServer.send ( 400, "text/html", "Page not Found" );   }  );
     MyWebServer.begin();
-    Serial.println( "My Web server has started" );
+    Extend_time = 900;
+    telnet_println("My Web server has started for " + String(Extend_time/60) + " minutes");
+  }
+  else {
+    MyWebServer.close();
+    Extend_time = 0;
+  }
 }
 
   // WEB commands to run on loop function.

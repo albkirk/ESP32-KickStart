@@ -152,11 +152,11 @@ unsigned long BL0937::getEnergy() {
     f = N/t (N=pulse count, t = time)
     E = P*t = m*N  (E=energy)
     */
-    return _pulse_count * (_power_multiplier / 1000000 / 2);
+    return _pulse_count * (_power_multiplier / 1000000 * 2);
 }
 
 void BL0937::resetEnergy(unsigned long rst_energy = 0) {
-    _pulse_count = (rst_energy / (_power_multiplier / 1000000 / 2));
+    _pulse_count = (rst_energy / (_power_multiplier / 1000000 * 2));
 }
 
 void BL0937::expectedCurrent(double value) {

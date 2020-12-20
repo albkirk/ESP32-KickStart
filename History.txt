@@ -1,0 +1,27 @@
+v12.01 2020/10/28
+Adding HASSIO MQTT Discovery support
+Variable "Location" not used on MQTT (as hassio defines the "area" on the pltaform side)
+NOTE: It deeply changed the topic structure!!!
+
+v11.03 2020/10/19
+Default config on separated file (in lib/project/def_conf.h)
+Faster Boot-to sleep time (about 2 sec), due to several improvements, including:
+Optimzed Wireless Connection. It uses fixed radio params and previous IP if waking from Deep-Sleep, else, search for Wireless and uses DHCP (if IP was not fixed by user).
+MQTT reduced timeout
+OTA reduced timeout
+Possble to store telemetry data on SIPPS and dump it as soon as it connects to MQTT broker
+
+v9 2018/11/29
+Brand / Model  Parameters (to be used on HTTP Upg)
+Adding HTTP Upgrade + (aligned with Node-RED) + customized version of "httpUpdate.h"
+customMQTT head file,
+adding ON-Time offset (to allow 0 sec on-time value via mqtt and not break the chance of getting the "extend msg")
+Adding NTP service
+
+v5 2018/02/22
+Using JSON for storage, but using Struct for running configuration (like it was used on v3)
+
+v4 2018/02/20
+Change Storage and running configuration to JSON
+NOT OK
+Crashing when changing LED status (or any other param) via MQTT command 

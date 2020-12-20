@@ -22,10 +22,14 @@ I'm coding my own variant of this popular project, with some inspiration and les
 	9. Remote "Debug" using Telnet (enabled via MQTT)
 	10. Long operational live (it will be running 365 days a year, so, it recovers from Wifi or MQTT loss)
 	11. Date / Time with NTP sync
-	12. WiFi "Air" sniffing for APs, Registered Stations and "Unregistered" Stations
+	12. Web Page for Initial configuration
+	13. Power consumption optimization
+	14. Secure communication (https or other methods)
+
+## --Dependencies--
+You must install the following libraries (under arduino or Platformio)
+	1. **ArduinoJson** by Benoit Blanchon 
+	2. **PubSubClient** by Nick O'Leary 
 
 ## Future features!!
-	1. Web Page for "minimum" configuration (it kinda works...)
-	2. Power consumption optimization
-	3. Secure communication (https or other methods)
-   
+	1. WiFi "Air" sniffing for APs, Registered Stations and "Unregistered" Stations (It kinda works....)

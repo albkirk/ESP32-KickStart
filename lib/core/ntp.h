@@ -1,5 +1,3 @@
-#include <WiFiUdp.h>
-
 #define LEAP_YEAR(Y) ( ((1970+Y)>0) && !((1970+Y)%4) && ( ((1970+Y)%100) || !((1970+Y)%400) ) )
 
 #ifndef custo_strDateTime
@@ -15,24 +13,21 @@ struct strDateTime
 };
 #endif
 
-strDateTime DateTime;                         // Global DateTime structure
+static strDateTime DateTime;                  // Global DateTime structure
 strDateTime LastDateTime = {25, 61, 61, 1, 13, 32, 8};
 static const uint8_t monthDays[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 static const String WeekDays[] = {"Weekends", "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT", "Daily", "Work Days"};
-const int NTP_PACKET_SIZE = 48;
-byte packetBuffer[ NTP_PACKET_SIZE];
+
 volatile unsigned long UTCTimeStamp = 0;      // GLOBAL TIME var ( Will be retrieved via NTP protocol)
 volatile unsigned long UnixTimeStamp = 0;     // GLOBAL TIME var ( Will be devivated from UTCTimeStamp for local time zone)
 unsigned long RefMillis = 0;                  // Millis val for reference
-boolean NTP_Sync = false;                     // NTP is synched?
+bool NTP_Sync = false;                        // Is NTP synched?
 unsigned int NTP_Retry = 120;                 // Timer to retry the NTP connection
-unsigned long NTP_LastTime = 0;                        // Last NTP connection attempt time stamp
+unsigned long NTP_LastTime = 0;               // Last NTP connection attempt time stamp
 int NTP_errors = 0;                           // NTP errors Counter
+volatile unsigned long cur_utctime;           // Auxiliary var
 volatile unsigned long cur_unixtime;          // Auxiliary var
-volatile unsigned long ntpNOW = 0;            // Auxiliary var for millis
-
-
-WiFiUDP UDPNTPClient;                         // NTP Client
+static unsigned long ntpNOW = 0;              // Auxiliary var for millis
 
 
 strDateTime ConvertTimeStamp( unsigned long _tempTimeStamp) {
@@ -115,108 +110,101 @@ unsigned long adjustTimeZone(unsigned long _timeStamp, int _timeZone, bool _isDa
 }
 
 
-void getNTPtime()
-{
-    UTCTimeStamp = 0;                             // Resetting value to 0
+void getNTPtime() {
+    bool loop_timeOut = true;
+    NTP_Sync = false;
+    unsigned long NTPTime = 0;                        // Resetting value to 0
 
-    if (WIFI_state != WL_CONNECTED) telnet_println( "ERROR! ==> WiFi NOT Connected!" );
+    if (WIFI_state != WL_CONNECTED) telnet_println( "NTP ERROR! ==> WiFi NOT Connected!" );
     else {
-          UDPNTPClient.begin(2390);               // Port for NTP receive
-          IPAddress timeServerIP;
-          WiFi.hostByName(config.NTPServerName, timeServerIP);
-
-          //Serial.println("sending NTP packet...");
-          memset(packetBuffer, 0, NTP_PACKET_SIZE);
-          packetBuffer[0] = 0b11100011;             // LI, Version, Mode
-          packetBuffer[1] = 0;                      // Stratum, or type of clock
-          packetBuffer[2] = 6;                      // Polling Interval
-          packetBuffer[3] = 0xEC;                   // Peer Clock Precision
-          packetBuffer[12]  = 49;
-          packetBuffer[13]  = 0x4E;
-          packetBuffer[14]  = 49;
-          packetBuffer[15]  = 52;
-          UDPNTPClient.beginPacket(timeServerIP, 123);
-          UDPNTPClient.write(packetBuffer, NTP_PACKET_SIZE);
-          UDPNTPClient.endPacket();
-
-          delay(100);
-
-          int cb = UDPNTPClient.parsePacket();
-          if (cb == 0) {
-              Serial.println("No NTP packet received.");
-          }
-          else {
-              Serial.print("NTP packet received with length = ");
-              Serial.println(cb);
-              UDPNTPClient.read(packetBuffer, NTP_PACKET_SIZE); // read the packet into the buffer
-              RefMillis = millis();           // Exact moment that NTP data was retrived
-              unsigned long highWord = word(packetBuffer[40], packetBuffer[41]);
-              unsigned long lowWord = word(packetBuffer[42], packetBuffer[43]);
-              unsigned long secsSince1900 = highWord << 16 | lowWord;
-              const unsigned long seventyYears = 2208988800UL;
-              UTCTimeStamp = secsSince1900 - seventyYears;      // store "Coordinated Universal Time" (UTC) time stamp
-              UTCTimeStamp = UTCTimeStamp - RefMillis/1000;     // store UTC time stamp since millis() = 0 ... aka Boot!
-          };
-
+        myconfigTime("TZ_Etc_UTC", config.NTPServerName, config.NTPServerName, config.NTPServerName);
+        unsigned long start_sync = millis();
+        loop_timeOut = false;
+        while ( !NTP_Sync && !loop_timeOut) {
+            NTPTime = time(nullptr);
+            RefMillis = millis();                 // Exact moment that NTP data was retrived
+            if (millis() - start_sync > 1000) loop_timeOut = true;
+            if (NTPTime > 31536000UL) NTP_Sync = true;
+            yield();
+        }
+        if (NTP_Sync) { 
+            UTCTimeStamp = NTPTime;
+            ntpNOW = millis();                  // To make sure that it 1st value is valid
+        }
     }
-    yield();
-    if (UTCTimeStamp > 0) {
-        UnixTimeStamp = adjustTimeZone(UTCTimeStamp, config.TimeZone, config.isDayLightSaving);
-        NTP_Sync = true;
+    if (ESPWakeUpReason() == "Deep-Sleep Wake" && loop_timeOut) {
+        UTCTimeStamp = rtcData.lastUTCTime + config.SLEEPTime * 60 + 1;   // + 1 is an empirical number to adjust the time error.
+        RefMillis = 0;
     }
-    else NTP_Sync = false;
+    if (UTCTimeStamp > 31536000UL) {
+                //const unsigned long seventyYears = 2208988800UL;
+                //UTCTimeStamp = secsSince1900 - seventyYears;      // store "Coordinated Universal Time" (UTC) time stamp
+                UTCTimeStamp = UTCTimeStamp - RefMillis/1000;     // store UTC time stamp since millis() = 0 ... aka @ Boot time!
+                UnixTimeStamp = adjustTimeZone(UTCTimeStamp, config.TimeZone, config.isDayLightSaving);
+    }
+    else {
+          NTP_errors ++;
+          telnet_println( "NTP ERROR! ==> NO valid Local Date / Time" );
+    }
+}
+
+unsigned long curUTCTime() {
+    if (ntpNOW < RefMillis) {                       // If true, it would mean the millis() counter had looped. 
+        UTCTimeStamp = UTCTimeStamp + 4294967295UL;
+        NTP_Sync = false;
+    }
+    ntpNOW = millis();
+    cur_utctime = UTCTimeStamp + ntpNOW/1000;
+    //telnet_println("Current UTC time: " + String(cur_utctime));
+    return cur_utctime;
 }
 
 unsigned long curUnixTime() {
-    ntpNOW = millis();
-    if (ntpNOW < RefMillis) {
-        UTCTimeStamp = UTCTimeStamp + 4294967;
+    if (ntpNOW < RefMillis) {                       // If true, it would mean the millis() counter had looped. 
+        UTCTimeStamp = UTCTimeStamp + 4294967295UL;
         UnixTimeStamp = adjustTimeZone(UTCTimeStamp, config.TimeZone, config.isDayLightSaving);
         RefMillis = 0;
         NTP_Sync = false;
     }
+    ntpNOW = millis();
     cur_unixtime = UnixTimeStamp + ntpNOW/1000;
     //telnet_println("Current UNIX time: " + String(cur_unixtime));
     return cur_unixtime;
 }
 
-
-void curDateTime() {
+String curDateTime() {
+    String cdt_var = "";
     cur_unixtime = curUnixTime();
     DateTime = ConvertTimeStamp(cur_unixtime);
-    //telnet_println("Current Local Date: " + String(DateTime.year) + "/" + String(DateTime.month) + "/" + String(DateTime.day));
-    //telnet_println("Current Local Time: " + String(DateTime.hour) + ":" + String(DateTime.minute) + ":" + String(DateTime.second));
+    cdt_var =  String(WeekDays[DateTime.wday]) + ", " + String(DateTime.year) + "/" + String(DateTime.month) + "/" + String(DateTime.day);
+    cdt_var += "\t" + String(DateTime.hour) + ":" + String(DateTime.minute) + ":" + String(DateTime.second);
+    return cdt_var;
 }
-
-byte DateTime_hour(void) {return DateTime.hour;}
-byte DateTime_minute(void) {return DateTime.minute;}
-byte DateTime_second(void) {return DateTime.second;}
 
 
 void ntp_setup () {
     getNTPtime();
     if (NTP_Sync) {
-        curDateTime();
-        telnet_println("Current Local Date: " + String(DateTime.wday) + ", " + String(DateTime.year) + "/" + String(DateTime.month) + "/" + String(DateTime.day));
-        telnet_println("Current Local Time: " + String(DateTime.hour) + ":" + String(DateTime.minute) + ":" + String(DateTime.second));
-    }
+        
+        telnet_println("Current Local Date / Time: " + curDateTime());
+   }
 }
 
 
 void ntp_loop () {
-    if (!NTP_Sync) {
-        if ( millis() - NTP_LastTime > (NTP_Retry * 1000)) {
-            NTP_errors ++;
-            Serial.println( "in loop function NTP NOT sync! #: " + String(NTP_errors));
-            NTP_LastTime = millis();
-            getNTPtime();
+  if (!NTP_Sync) {
+      if ( millis() - NTP_LastTime > (NTP_Retry * 1000)) {
+          NTP_errors ++;
+          if (config.DEBUG) Serial.println( "in loop function NTP NOT sync! #: " + String(NTP_errors));
+          NTP_LastTime = millis();
+          getNTPtime();
         }
     }
     else {
         if ( millis() - NTP_LastTime > (config.Update_Time_Via_NTP_Every * 60 * 1000)) {
             NTP_LastTime = millis();
             getNTPtime();
-        }
-    }
-    yield();
+      }
+  }
+  yield();
 }
