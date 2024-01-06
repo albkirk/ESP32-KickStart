@@ -1,4 +1,4 @@
-# ESP32 Project "Kick Start" Template
+# ESP32 Project "Kick Start" Template  -- #DEPRECATED#
 
 
 This is a personal project to create a starting point for all my ESP projects.
@@ -28,8 +28,8 @@ I'm coding my own variant of this popular project, with some inspiration and les
 
 ## --Dependencies--
 You must install the following libraries (under arduino or Platformio)
-	1. **ArduinoJson** by Benoit Blanchon 
-	2. **PubSubClient** by Nick O'Leary 
+	1. **ArduinoJson**Â byÂ Benoit Blanchon 
+	2. **PubSubClient**Â byÂ Nick O'Leary 
 
 ## Future features!!
 	1. WiFi "Air" sniffing for APs, Registered Stations and "Unregistered" Stations (It kinda works....)
