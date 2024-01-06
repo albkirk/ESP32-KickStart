@@ -1,5 +1,7 @@
 # ESP32 Project "Kick Start" Template  -- #DEPRECATED#
 
+Use this project https://github.com/albkirk/ESP-KickStart
+
 
 This is a personal project to create a starting point for all my ESP projects.
 It is written in C++ under PlatformIO IDE (integrated on ATOM or Visual Studio Code platforms).
